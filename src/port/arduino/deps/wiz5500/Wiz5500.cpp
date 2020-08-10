@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "Wiz5500.h"
-#include <w5500.h>
+#include <utility/w5500.h>
 #include "oc_log.h"
 
 struct wiz5500 {

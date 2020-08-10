@@ -24,7 +24,7 @@
 #define ETH_ADAPTER_UTILS_
 
 #include <stdint.h>
-#include <socket.h>
+#include <utility/socket.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -57,7 +57,7 @@ do {                                                        \
 #define SD_CLR(sd, _setsds)   (((sdset_t*)_setsds)->sdsset &= ~(1 << (sd % SETSIZE)))
 #define SD_ISSET(sd, _setsds) (((sdset_t*)_setsds)->sdsset & (1 << (sd % SETSIZE)))
 
-uint8_t select(uint8_t nsds, sdset_t *setsds);
+uint8_t sd_select(uint8_t nsds, sdset_t *setsds);
 int16_t recv_msg(uint8_t *socketID, uint8_t *sender_addr,
 				uint16_t *sender_port, uint8_t *data, uint16_t packets_size);
 

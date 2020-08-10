@@ -38,14 +38,14 @@ oc_clock_init(void)
 oc_clock_time_t
 oc_clock_time(void)
 {
-    oc_clock_time_t time = (oc_clock_time_t)secondNow();
+    oc_clock_time_t time = (oc_clock_time_t)second(now());
     return time * OC_CLOCK_CONF_TICKS_PER_SECOND;
 }
 
 unsigned long
 oc_clock_seconds(void)
 {
-    oc_clock_time_t time = (oc_clock_time_t)secondNow();
+    oc_clock_time_t time = (oc_clock_time_t)second(now());
     return time;
 }
 

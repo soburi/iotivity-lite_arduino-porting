@@ -15,13 +15,15 @@
 * limitations under the License.
 *
 ******************************************************************/
+#include <Arduino.h>
+#include <utility/socket.h>
 #include <ctype.h>
 #include "oc_config.h"
 #include "port/oc_log.h"
 #include "port/oc_assert.h"
 #include "port/oc_connectivity.h"
 #include "port/oc_log.h"
-#include "Wiz5500.h"
+#include "port/arduino/deps/wiz5500/Wiz5500.h"
 #include "ethadapter_utils.h"
 
 
@@ -238,7 +240,7 @@ static uint16_t socket_ready(uint8_t *socketID){
   }
 }
 
-uint8_t select(uint8_t nsds, sdset_t *setsds){
+uint8_t sd_select(uint8_t nsds, sdset_t *setsds){
   uint8_t n = 0;
   for(int i = 1; i < nsds; i++){
       uint16_t ret = socket_ready(&setsds->sds[i]);

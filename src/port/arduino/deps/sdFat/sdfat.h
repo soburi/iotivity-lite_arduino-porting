@@ -6,7 +6,6 @@ extern "C" {
 #endif
 #include <stdint.h>
 #include <stdlib.h>
-#include <FatApiConstants.h>
 // holder for sd objects pointer
 typedef struct _sdFat {
     void *sd;

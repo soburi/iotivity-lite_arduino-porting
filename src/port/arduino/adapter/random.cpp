@@ -15,12 +15,68 @@
 * limitations under the License.
 *
 ******************************************************************/
+#include <Arduino.h>
 #include "port/oc_random.h"
 #include "port/oc_log.h"
 #include "oc_helpers.h"
 
 #if defined(__AVR__)
-#include "prng.h"
+#include "pRNG.h"
+
+typedef struct {
+    void *prng_ref;
+} prng_t;
+
+prng_t *_prng_holder = NULL;
+
+prng_t *prng_create()
+{
+    prng_t *prng_holder;
+    pRNG *prng_ref;
+
+    prng_holder     = (typeof(prng_holder))malloc(sizeof(*prng_holder));
+    prng_ref    = new pRNG();
+    prng_holder->prng_ref = prng_ref;
+    return prng_holder;
+}
+
+void prng_destroy(prng_t *prng_holder)
+{
+    if (prng_holder== NULL)
+        return;
+    delete static_cast<pRNG *>(prng_holder->prng_ref);
+    free(prng_holder);
+}
+uint8_t prng_getRndByte(prng_t *prng_holder){
+
+    pRNG *prng_ref;
+
+    if (prng_holder== NULL)
+        return 1;
+
+    prng_ref = static_cast<pRNG *>(prng_holder->prng_ref);
+    return prng_ref->getRndByte();
+}
+
+uint16_t prng_getRndInt(prng_t *prng_holder){
+
+    pRNG *prng_ref;
+
+    if (prng_holder== NULL)
+        return 1;
+    prng_ref = static_cast<pRNG *>(prng_holder->prng_ref);
+    return prng_ref->getRndInt();
+}
+
+uint32_t prng_getRndLong(prng_t *prng_holder){
+
+    pRNG *prng_ref;
+
+    if (prng_holder== NULL)
+        return 1;
+    prng_ref = static_cast<pRNG *>(prng_holder->prng_ref);
+    return prng_ref->getRndLong();
+}
 #elif defined(__SAMD21G18A__)
 #include <WMath.h>
 #include "stdlib.h"
