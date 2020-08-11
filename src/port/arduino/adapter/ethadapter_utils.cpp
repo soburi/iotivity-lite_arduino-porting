@@ -16,6 +16,8 @@
 *
 ******************************************************************/
 #include <Arduino.h>
+#include <Ethernet2.h>
+#include <utility/w5500.h>
 #include <utility/socket.h>
 #include <ctype.h>
 #include "oc_config.h"
@@ -23,23 +25,17 @@
 #include "port/oc_assert.h"
 #include "port/oc_connectivity.h"
 #include "port/oc_log.h"
-#include "port/arduino/deps/wiz5500/Wiz5500.h"
 #include "ethadapter_utils.h"
 
 
 OCResult_t arduino_get_free_socket(uint8_t *sockID){
 
 	uint8_t state;
-	if(!wiznet5500) {
-		wiznet5500 = wiz5500_create();
-		if(!wiznet5500)
-			return STATUS_FAILED;
-	}
 	*sockID = 0;
 	for (uint8_t i = 1; i < MAX_SOCK_NUM; i++)
 	{
-		state = wiz5500_readSnSR(wiznet5500, &i) ;
-		if (state == SnSR_CLOSED || state == SnSR_FIN_WAIT)
+		state = w5500.readSnSR(i) ;
+		if (state == SnSR::CLOSED || state == SnSR::FIN_WAIT)
 		{
 			*sockID = i;
 			break;
@@ -67,7 +63,7 @@ OCResult_t arduino_init_udp_socket(uint16_t *local_port, uint8_t *socketID){
 		return ret;
 	}
 	//Create a datagram socket on which to recv/send.
-	if (!socket(*socketID, SnMR_UDP, *local_port, 0))
+	if (!socket(*socketID, SnMR::UDP, *local_port, 0))
 	{
 		OC_ERR("socket create failed!");
 		return STATUS_FAILED;
@@ -102,10 +98,10 @@ arduino_init_mcast_udp_socket(const char *mcast_addr, uint16_t *mcast_port,
 	mcast_mac_addr[3] = ip_addr[1] & 0x7F;
 	mcast_mac_addr[4] = ip_addr[2];
 	mcast_mac_addr[5] = ip_addr[3];
-	wiz5500_writeSnDIPR(wiznet5500, socketID, (uint8_t *)ip_addr);
-	wiz5500_writeSnDHAR(wiznet5500, socketID, (uint8_t *)mcast_mac_addr);
-	wiz5500_writeSnDPORT(wiznet5500, socketID, mcast_port);
-	if (!socket(*socketID, SnMR_UDP, *local_port, SnMR_MULTI))
+	w5500.writeSnDIPR(*socketID, (uint8_t *)ip_addr);
+	w5500.writeSnDHAR(*socketID, (uint8_t *)mcast_mac_addr);
+	w5500.writeSnDPORT(*socketID, *mcast_port);
+	if (!socket(*socketID, SnMR::UDP, *local_port, SnMR::MULTI))
 	{
 		OC_ERR("sock create fail!");
 		return SOCKET_OPERATION_FAILED;
@@ -115,13 +111,7 @@ arduino_init_mcast_udp_socket(const char *mcast_addr, uint16_t *mcast_port,
 /// Retrieves the IP address assigned to Arduino Ethernet shield
 OCResult_t oc_ard_get_iface_addr(uint8_t *address)
 {
-	//TODO : Fix this for scenarios when this API is invoked when device is not connected
-	if(!wiznet5500) {
-		wiznet5500 = wiz5500_create();
-		if(!wiznet5500)
-			return STATUS_FAILED;
-	}
-	wiz5500_getIPAddress(wiznet5500, (uint8_t *)address);
+	w5500.getIPAddress((uint8_t *)address);
 	return STATUS_OK;
 }
 
@@ -197,12 +187,7 @@ uint8_t start_udp_server(uint16_t *local_port)
 		return STATUS_FAILED;
 	}
 	uint8_t raw_ip_addr[4];
-	if(!wiznet5500) {
-		wiznet5500 = wiz5500_create();
-		if(!wiznet5500)
-			return STATUS_FAILED;
-	}
-	wiz5500_getIPAddress(wiznet5500, raw_ip_addr);
+	w5500.getIPAddress(raw_ip_addr);
 	uint8_t serverFD = 1; // try this socket
 	if (arduino_init_udp_socket(local_port, &serverFD) != STATUS_OK)
 	{
@@ -227,12 +212,7 @@ uint8_t start_udp_mcast_server(const char *mcast_addr,
 /*Utility method to monitor ready socket*/
 static uint16_t socket_ready(uint8_t *socketID){
 
-  if(!wiznet5500) {
-    wiznet5500 = wiz5500_create();
-    if(!wiznet5500)
-      return STATUS_FAILED;
-  }
-  uint16_t recvLen = wiz5500_getRXReceivedSize(wiznet5500, socketID);
+  uint16_t recvLen = w5500.getRXReceivedSize(*socketID);
   if(recvLen == 0) {
     return 0;
   } else {
