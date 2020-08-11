@@ -84,6 +84,9 @@ typedef uint32_t oc_clock_time_t;
 /* Maximum number of concurrent (D)TLS sessions */
 #define OC_MAX_TLS_PEERS (1)
 
+#define OC_CLIENT
+#define OC_SERVER
+
 
 #endif /* !OC_DYNAMIC_ALLOCATION */
 
