@@ -15,6 +15,8 @@
 * limitations under the License.
 *
 ******************************************************************/
+#include <Arduino.h>
+#include <utility/socket.h>
 #include "oc_buffer.h"
 #include "oc_endpoint.h"
 #include "ipcontext.h"
@@ -43,7 +45,7 @@ void oc_network_event_handler_mutex_destroy(void) {}
 static ip_context_t *
 get_ip_context_for_device(size_t device)
 {
-  ip_context_t *dev = oc_list_head(ip_contexts);
+  ip_context_t *dev = (ip_context_t*)oc_list_head(ip_contexts);
   while (dev != NULL && dev->device != device) {
     dev = dev->next;
   }
@@ -56,11 +58,11 @@ get_ip_context_for_device(size_t device)
 static void
 free_endpoints_list(ip_context_t *dev)
 {
-  oc_endpoint_t *ep = oc_list_pop(dev->eps);
+  oc_endpoint_t *ep = (oc_endpoint_t*)oc_list_pop(dev->eps);
 
   while (ep != NULL) {
     oc_memb_free(&device_eps, ep);
-    ep = oc_list_pop(dev->eps);
+    ep = (oc_endpoint_t*)oc_list_pop(dev->eps);
   }
 }
 /*We not handling potential change of network interface as yet*/
@@ -73,9 +75,9 @@ get_interface_addresses(ip_context_t *dev, uint16_t port, bool secure)
   oc_ard_get_iface_addr(ep.addr.ipv4.address);
   ep.addr.ipv4.port = port;
   if (secure) {
-    ep.flags |= SECURED;
+    ep.flags = static_cast<transport_flags>(ep.flags | SECURED);
   }
-  oc_endpoint_t *new_ep = oc_memb_alloc(&device_eps);
+  oc_endpoint_t *new_ep = (oc_endpoint_t*)oc_memb_alloc(&device_eps);
   if (!new_ep) {
     return;
   }
@@ -105,7 +107,7 @@ oc_connectivity_get_endpoints(size_t device)
     refresh_endpoints_list(dev);
     oc_network_event_handler_mutex_unlock();
   }
-  return oc_list_head(dev->eps);
+  return (oc_endpoint_t*)oc_list_head(dev->eps);
 }
 
 int oc_send_buffer(oc_message_t *message) {
@@ -233,7 +235,7 @@ oc_udp_receive_message(ip_context_t *dev, sdset_t *sds, oc_message_t *message)
       return ADAPTER_STATUS_ERROR;
     }
     message->length = (size_t)count;
-    message->endpoint.flags = IPV4 | MULTICAST;
+    message->endpoint.flags = static_cast<transport_flags>(IPV4 | MULTICAST);
     SD_SET(dev->mcast4_sock, sds);
     return ADAPTER_STATUS_RECEIVE;
   }
@@ -245,7 +247,7 @@ oc_udp_receive_message(ip_context_t *dev, sdset_t *sds, oc_message_t *message)
       return ADAPTER_STATUS_ERROR;
     }
     message->length = (size_t)count;
-    message->endpoint.flags = IPV4 | SECURED;
+    message->endpoint.flags = static_cast<transport_flags>(IPV4 | SECURED);
     message->encrypted = 1;
     SD_SET(dev->secure4_sock, sds);
     return ADAPTER_STATUS_RECEIVE;

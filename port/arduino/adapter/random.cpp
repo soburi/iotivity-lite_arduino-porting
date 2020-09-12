@@ -20,9 +20,13 @@
 #include "oc_helpers.h"
 
 #if defined(__AVR__)
-#include "prng.h"
+#include "pRNG.h"
+
+static pRNG _pRNG;
+
 #elif defined(__SAMD21G18A__)
 #include <WMath.h>
+#include <wiring_analog.h>
 #include "stdlib.h"
 #include "stdint.h"
 // This temporary: one need to implment the prng for samd ARCH
@@ -55,9 +59,7 @@ extern long _random32( long howsmall, long howbig )
 void
 oc_random_init(void)
 {
-#if defined(__AVR__)
-  _prng_holder = prng_create();
-#elif defined(__SAM3X8E__ )
+#if defined(__SAM3X8E__ )
   pmc_enable_periph_clk(ID_TRNG);
   TRNG->TRNG_IDR = 0xFFFFFFFF;
   TRNG->TRNG_CR = TRNG_CR_KEY(0x524e47) | TRNG_CR_ENABLE;
@@ -71,12 +73,7 @@ oc_random_value(void)
 {
 unsigned int rand_val = 0;
 #if defined(__AVR__)
-  if(_prng_holder == NULL) {
-    _prng_holder = prng_create();
-  }
-  if (_prng_holder == NULL)
-      return 0;
-  rand_val =  (unsigned int)prng_getRndInt(_prng_holder);
+  rand_val =  (unsigned int)_pRNG.getRndInt();
 #elif defined(__SAM3X8E__ )
   while (! (TRNG->TRNG_ISR & TRNG_ISR_DATRDY));
   rand_val = TRNG->TRNG_ODATA;
@@ -89,7 +86,4 @@ unsigned int rand_val = 0;
 void
 oc_random_destroy(void)
 {
-#ifdef __AVR__
-  prng_destroy(_prng_holder);
-#endif
 }

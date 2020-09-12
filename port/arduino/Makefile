@@ -28,6 +28,12 @@ else
 $(error Must define an app server/client to proceed!)
 endif
 
+ifeq ($(VERBOSE),1)
+        CXXFLAGS += -DOC_DEBUG -DOC_LOG_L1
+else ifeq ($(VERBOSE),2)
+        CXXFLAGS += -DOC_DEBUG  -DOC_LOG_L2
+endif
+
 ifeq ($(DYNAMIC),1)
 	CXXFLAGS += -DOC_DYNAMIC_ALLOCATION
 endif
@@ -39,6 +45,11 @@ endif
 ifeq ($(IPV4),1)
 	CXXFLAGS += -DOC_IPV4
 endif
+
+ifeq ($(COLLECTIONS),1)
+	CXXFLAGS += -DOC_COLLECTIONS
+endif
+
 
 
 ### Iotivity contrained includes

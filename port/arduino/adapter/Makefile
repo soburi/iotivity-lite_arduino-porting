@@ -26,15 +26,19 @@ LIB_HEADERS   =-I$(ARDUINO_DIR)/libraries/Ethernet2/src/utility -I$(ARDUINO_DIR)
 DEPS_HEADERS  =$(addprefix -I../deps/, pRNG  wiz5500 sdFat serial)
 CORE_HEADERS  =$(addprefix -I$(ROOT_DIR)/, messaging/coap util util/pt include  api port .)
 CFLAGS += -I. $(CORE_HEADERS) $(LIB_HEADERS) $(DEPS_HEADERS)
+CXXFLAGS += -I. $(CORE_HEADERS) $(LIB_HEADERS) $(DEPS_HEADERS)
 
 ifeq ($(VERBOSE),1)
 	CFLAGS += -DOC_DEBUG -DOC_LOG_L1
+	CXXFLAGS += -DOC_DEBUG -DOC_LOG_L1
 else ifeq ($(VERBOSE),2)
 	CFLAGS += -DOC_DEBUG  -DOC_LOG_L2
+	CXXFLAGS += -DOC_DEBUG  -DOC_LOG_L2
 endif
 
 ifeq ($(DYNAMIC),1)
 	CFLAGS += -DOC_DYNAMIC_ALLOCATION
+	CXXFLAGS += -DOC_DYNAMIC_ALLOCATION
 endif
 
 ifeq ($(SECURE),1)
@@ -47,22 +51,27 @@ ifneq ($(DYNAMIC),1)
 	SRC_COMMON +=$(MBEDTLS_DIR)/library/memory_buffer_alloc.c
 endif
 	CFLAGS += ${DTLSFLAGS} -DOC_SECURITY
+	CXXFLAGS += ${DTLSFLAGS} -DOC_SECURITY
 endif
 
 ifeq ($(IPV4),1)
 	CFLAGS += -DOC_IPV4
+	CXXFLAGS += -DOC_IPV4
 endif
 
 ifeq ($(COLLECTIONS),1)
 	CFLAGS += -DOC_COLLECTIONS
+	CXXFLAGS += -DOC_COLLECTIONS
 endif
 
 ifeq ($(APP),server)
 	CFLAGS 	+= -DOC_SERVER
+	CXXFLAGS 	+= -DOC_SERVER
 endif
 
 ifeq ($(APP),client)
 	CFLAGS 	+= -DOC_CLIENT
+	CXXFLAGS 	+= -DOC_CLIENT
 endif
 
 LOCAL_C_SRCS += $(SRC_COMMON)

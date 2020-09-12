@@ -37,12 +37,21 @@ install_dependancies(){
 			if [ ! -d $path ]; then
 				remote=`echo $lib | cut -d '|' -f 2`
 				printf "%bInstalling missing library: $remote %b\n" "$WRN" "$DEFAULT"
-				git clone $remote
+				tag=$(eval echo \$TAG_${path})
+				if [ -z tag ]; then
+					git clone $remote
+				else
+					git clone $remote -b $tag
+				fi
 			else
 				printf "%bCleaning local libray: $path %b\n" "$WRN" "$DEFAULT"
+				tag=$(eval echo \$TAG_${path})
 				cd $path
 				git clean -fdx .
 				git reset --hard
+				if [ -n tag ]; then
+					git checkout $tag
+				fi
 				cd ../
 			fi
 			patch_file=$BUILD_PATCHES/$path.patch
@@ -56,21 +65,6 @@ install_dependancies(){
 		printf "%bInstall arduino IDE and provide a valid path to proceed%b\n" "$ERR" "$DEFAULT"
 		exit 1
 	fi
-	if [ $ARCH == "samd" ]; then
-		SAMD_RANDOM_PATCH_FILE=$BUILD_PATCHES/samd_random.patch
-		cd ~/.arduino15/packages/arduino/hardware/samd/1.6.20/cores
-		patch -r - -s -N -p1 --dry-run < $SAMD_RANDOM_PATCH_FILE 2>/dev/null
-		#If the patch has not been applied then the $? which is the exit status
-		#for last command would have a success status code = 0
-		if [ $? -eq 0 ]; then
-			printf "%bAdding samd basic random support%b\n" "$DBG" "$DEFAULT"
-			patch -r - -s -N -p1 < $SAMD_RANDOM_PATCH_FILE
-			printf "%bPatch $SAMD_RANDOM_PATCH_FILE  succesfully applied%b\n\n" "$DBG" "$DEFAULT"
-		else
-			printf "%bRandom support for samd already added%b\n" "$WRN" "$DEFAULT"
-		fi
-	fi
-
 }
 install_arduino_makefile() {
 	echo "*********************************************************************"
@@ -145,6 +139,10 @@ export ARDMK_DIR=$PWD/Arduino-Makefile
 export ARDMK_REMOTE="https://github.com/sudar/Arduino-Makefile"
 
 declare -a LIBS=('Ethernet2|https://github.com/adafruit/Ethernet2.git' 'pRNG|https://github.com/leomil72/pRNG.git' 'SdFat|https://github.com/greiman/SdFat.git' 'Time|https://github.com/PaulStoffregen/Time.git' )
+declare TAG_Ethernet2="1.0.4"
+declare TAG_pRNG="1.2.3"
+declare TAG_SdFat="1.1.4"
+declare TAG_Time="v1.6"
 export LIBS
 export BUILD_PATCHES=$PWD/patches
 export VERBOSE=0 # dont use DEBUG as te Arduino.mk set optimization to 0 when defined

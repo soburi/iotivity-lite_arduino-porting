@@ -15,6 +15,10 @@
 * limitations under the License.
 *
 ******************************************************************/
+#include <Arduino.h>
+#include <Ethernet2.h>
+#include <utility/w5500.h>
+#include <utility/socket.h>
 #include <ctype.h>
 #include "oc_config.h"
 #include "port/oc_log.h"
@@ -266,7 +270,7 @@ OCResult_t ard_send_data(uint8_t socketID, uint8_t *dest_addr,
 	uint8_t _socketID = socketID; // default client socket
 	uint32_t ret = sendto(_socketID, data, len, dest_addr, *dest_port);
 	if (ret <= 0){
-		OC_ERR("SendData failed: %u", ret);
+		OC_ERR("SendData failed: %lu", ret);
 	}
 	return STATUS_OK;
 }
