@@ -1,6 +1,20 @@
 --- a/Arduino-Makefile/Arduino.mk	2019-04-11 15:28:21.579786532 +0200
 +++ b/Arduino-Makefile/Arduino.mk	2019-04-11 15:09:39.302742785 +0200
-@@ -889,7 +889,7 @@
+@@ -674,6 +674,13 @@ ifeq ($(strip $(NO_CORE)),)
+         $(call show_config_variable,VARIANT,[USER])
+     endif
+ 
++    ifndef BOARD
++        BOARD = $(call PARSE_BOARD,$(BOARD_TAG),build.board)
++        $(call show_config_variable,BOARD,[COMPUTED],(from build.board))
++    else
++        $(call show_config_variable,BOARD,[USER])
++    endif
++
+     # see if we are a caterina device like leonardo or micro
+     CATERINA := $(findstring caterina,$(call PARSE_BOARD,$(BOARD_TAG),menu.(chip|cpu).$(BOARD_SUB).bootloader.file))
+     ifndef CATERINA
+@@ -892,7 +899,7 @@ LOCAL_SRCS      = $(LOCAL_C_SRCS)   $(LOCAL_CPP_SRCS) \
  LOCAL_OBJ_FILES = $(LOCAL_C_SRCS:.c=.c.o)   $(LOCAL_CPP_SRCS:.cpp=.cpp.o) \
  		$(LOCAL_CC_SRCS:.cc=.cc.o)   $(LOCAL_PDE_SRCS:.pde=.pde.o) \
  		$(LOCAL_INO_SRCS:.ino=.ino.o) $(LOCAL_AS_SRCS:.S=.S.o)
@@ -9,3 +23,12 @@
  
  ifeq ($(words $(LOCAL_SRCS)), 0)
      $(error At least one source file (*.ino, *.pde, *.cpp, *c, *cc, *.S) is needed)
+@@ -1162,7 +1169,7 @@ else
+ endif
+ 
+ # Using += instead of =, so that CPPFLAGS can be set per sketch level
+-CPPFLAGS      += -$(MCU_FLAG_NAME)=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_VERSION) $(ARDUINO_ARCH_FLAG) \
++CPPFLAGS      += -$(MCU_FLAG_NAME)=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_VERSION) -DARDUINO_$(BOARD) $(ARDUINO_ARCH_FLAG) \
+         -I$(ARDUINO_CORE_PATH) -I$(ARDUINO_CORE_PATH)/api -I$(ARDUINO_VAR_PATH)/$(VARIANT) \
+         $(SYS_INCLUDES) $(PLATFORM_INCLUDES) $(USER_INCLUDES) -Wall -ffunction-sections \
+         -fdata-sections
