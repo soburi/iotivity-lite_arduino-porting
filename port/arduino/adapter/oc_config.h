@@ -87,6 +87,10 @@ typedef uint32_t oc_clock_time_t;
 
 #endif /* !OC_DYNAMIC_ALLOCATION */
 
+#ifdef OC_SECURITY
+#define OC_STORAGE
+#endif
+
 #ifdef __cplusplus
 }
 #endif

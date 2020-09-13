@@ -18,7 +18,7 @@ DTLSFLAGS=$(addprefix -I$(ROOT_DIR)/, security deps/mbedtls/include) -D__OC_RAND
 CBOR+=$(addprefix $(ROOT_DIR)/deps/tinycbor/src/, cborencoder.c cborencoder_close_container_checked.c cborparser.c)
 
 SRC_COMMON=$(wildcard  $(ROOT_DIR)/util/*.c) $(CBOR)
-SRC=$(wildcard $(ROOT_DIR)/messaging/coap/*.c $(ROOT_DIR)/api/*.c *.c )
+SRC=$(wildcard $(ROOT_DIR)/messaging/coap/*.c $(ROOT_DIR)/api/*.c $(ROOT_DIR)/api/c-timestamp/*.c *.c)
 
 # Arduino ethernet and iotivity constrained includes
 
@@ -42,8 +42,7 @@ ifeq ($(DYNAMIC),1)
 endif
 
 ifeq ($(SECURE),1)
-	SEC_SRC += $(addprefix $(ROOT_DIR)/security/, oc_acl.c oc_cred.c oc_doxm.c oc_pstat.c \
-	              oc_tls.c oc_svr.c oc_store.c oc_pki.c oc_certs.c oc_sp.c oc_keypair.c oc_csr.c oc_roles.c)
+	SEC_SRC +=$(wildcard $(ROOT_DIR)/security/*.c)
 	SRC += $(SEC_SRC)
 	SRC_COMMON += $(addprefix $(MBEDTLS_DIR)/library/,${DTLS})
 	MBEDTLS_PATCH_FILE := $(MBEDTLS_DIR)/patched.txt
@@ -79,7 +78,7 @@ LOCAL_C_SRCS += $(SRC)
 
 ${SRC} ${SRC_COMMON}: $(MBEDTLS_PATCH_FILE)
 
-VPATH=$(ROOT_DIR)/messaging/coap/:$(ROOT_DIR)/util/:$(ROOT_DIR)/api/:$(ROOT_DIR)/deps/tinycbor/src/:$(MBEDTLS_DIR)/library:$(ROOT_DIR)/security:
+VPATH=$(ROOT_DIR)/messaging/coap/:$(ROOT_DIR)/util/:$(ROOT_DIR)/api/:$(ROOT_DIR)/api/c-timestamp/:$(ROOT_DIR)/deps/tinycbor/src/:$(MBEDTLS_DIR)/library:$(ROOT_DIR)/security:
 
 ifeq ($(ARCH),avr)
 	include ../avr.mk
