@@ -1,5 +1,119 @@
---- a/port/oc_log.h	2019-04-15 21:50:39.653682500 +0200
-+++ b/port/oc_log.h	2019-04-17 13:48:31.186941913 +0200
+--- a/api/oc_rep.c
++++ b/api/oc_rep.c
+@@ -23,6 +23,57 @@
+ 
+ #include <inttypes.h>
+ 
++#ifndef __WITH_AVRLIBC__
++#define PRINT_INT64(str, len, value) snprintf(str, len, PRId64, value)
++#else
++#define PRINT_INT64(str, len, value) print_int64(str, len, value)
++
++static int print_int64(char* buf, size_t len, int64_t val) {
++  static const char digits[] = "0123456789";
++  char* ptr = buf;
++
++  if(val < 0) {
++    *ptr++ = '-';
++    val *= -1;
++  }
++
++  uint64_t order = 1000000000000000000ULL;
++
++  for(; order > 0; order /= 10) {
++    if( (val/order) == 0) {
++      continue;
++    } else {
++      goto print_digit;
++    }
++  }
++
++  if(buf == ptr || (buf[0] == '-' && (ptr == (buf+1))) ) {
++    if(ptr >= buf+len) return -1;
++    *ptr++ = '0';
++    if(ptr >= buf+len) return -1;
++    *ptr++ = '\0';
++    return ptr - buf;
++  }
++
++print_digit:
++  for(; order > 0; order /= 10) {
++    if(ptr >= buf+len) return len;
++
++    uint8_t num = (uint8_t)(val / order);
++    val -= (num * order);
++
++    if(ptr >= buf+len) return -1;
++    *ptr++ = digits[num];
++  }
++
++  if(ptr >= buf+len) return -1;
++  *ptr++ = '\0';
++  return ptr - buf;
++}
++
++
++#endif
++
+ static struct oc_memb *rep_objects;
+ static uint8_t *g_buf;
+ CborEncoder g_encoder, root_map, links_array;
+@@ -723,7 +774,7 @@ oc_rep_to_json_format(oc_rep_t *rep, char *buf, size_t buf_size, int tab_depth,
+     }
+     case OC_REP_INT: {
+       num_char_printed =
+-        snprintf(buf, buf_size, "%" PRId64, rep->value.integer);
++        PRINT_INT64(buf, buf_size, rep->value.integer);
+       OC_JSON_UPDATE_BUFFER_AND_TOTAL;
+       break;
+     }
+@@ -777,7 +828,7 @@ oc_rep_to_json_format(oc_rep_t *rep, char *buf, size_t buf_size, int tab_depth,
+       oc_rep_get_int_array(rep, oc_string(rep->name), &int_array,
+                            &int_array_size);
+       for (size_t i = 0; i < int_array_size; i++) {
+-        num_char_printed = snprintf(buf, buf_size, "%" PRId64, int_array[i]);
++        num_char_printed = PRINT_INT64(buf, buf_size, int_array[i]);
+         OC_JSON_UPDATE_BUFFER_AND_TOTAL;
+         if (i < int_array_size - 1) {
+           num_char_printed = (pretty_print) ? snprintf(buf, buf_size, ", ")
+--- a/api/oc_ri.c
++++ b/api/oc_ri.c
+@@ -757,8 +757,9 @@ oc_ri_invoke_coap_entity_handler(void *request, void *response, uint8_t *buffer,
+   size_t uri_query_len = coap_get_header_uri_query(request, &uri_query);
+ 
+   /* Read the Content-Format CoAP option in the request */
+-  oc_content_format_t cf = 0;
+-  coap_get_header_content_format(request, &cf);
++  unsigned int _cf;
++  coap_get_header_content_format(request, &_cf);
++  oc_content_format_t cf = _cf;
+ 
+   if (uri_query_len) {
+     request_obj.query = uri_query;
+@@ -1323,8 +1324,9 @@ oc_ri_invoke_client_cb(void *response, oc_client_cb_t *cb,
+ #endif /* OC_BLOCK_WISE */
+ {
+   endpoint->version = OCF_VER_1_0_0;
+-  oc_content_format_t cf = 0;
+-  coap_get_header_content_format(response, &cf);
++  unsigned int _cf;
++  coap_get_header_content_format(response, &_cf);
++  oc_content_format_t cf = _cf;
+ #ifdef OC_SPEC_VER_OIC
+   if (cf == APPLICATION_CBOR) {
+     endpoint->version = OIC_VER_1_1_0;
+--- a/include/oc_introspection.h
++++ b/include/oc_introspection.h
+@@ -50,7 +50,6 @@
+ #ifndef OC_INTROSPECTION_H
+ #define OC_INTROSPECTION_H
+ 
+-#include <wchar.h>
+ #include <inttypes.h>
+ #include <stddef.h>
+ 
+--- a/port/oc_log.h
++++ b/port/oc_log.h
 @@ -13,9 +13,7 @@
  // See the License for the specific language governing permissions and
  // limitations under the License.
@@ -11,57 +125,69 @@
  #ifndef OC_LOG_H
  #define OC_LOG_H
  
-@@ -25,13 +23,22 @@
- extern "C"
+@@ -30,9 +28,27 @@ extern "C"
  {
  #endif
--
--#define PRINT(...) printf(__VA_ARGS__)
-+#ifdef ARDUINO
-+#include "Arduino.h"
-+#include "serial.h"
-+#if defined(__AVR__)
-+#define PRINT(format, ...)  AVR_LOG(format, ##__VA_ARGS__)
-+#else
-+#define PRINT(format, ...)  ARM_LOG(format, ##__VA_ARGS__)  
-+#endif
-+#else
-+#define PRINT(...) printf(__VA_ARGS__) 
-+#endif
  
- #define PRINTipaddr(endpoint)                                                  \
-   do {                                                                         \
+-#ifdef __ANDROID__
++#if defined(__ANDROID__)
+ #define TAG "OC-JNI"
+ #define PRINT(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
++
++#elif defined(ARDUINO)
++
++#if defined(__AVR__)
++#include "avr/pgmspace.h"
++#define PCF(str)  ((PROGMEM const char *)(PSTR(str)))
++void avr_log(PROGMEM const char *format, ...);
++#define PRINT(format, ...) avr_log(PCF(format),##__VA_ARGS__)
++#else
++void arm_log(const char *format, ...);
++#define PRINT(format, ...) arm_log(format,##__VA_ARGS__)
++#endif
++
++#ifdef __cplusplus
++class Stream;
++void oc_arduino_set_logstream(Stream &strm);
++#endif
++
+ #else
+ #define PRINT(...) printf(__VA_ARGS__)
+ #endif
+@@ -50,7 +66,7 @@ extern "C"
+     if ((endpoint).flags & TCP && (endpoint).flags & SECURED)                  \
+       scheme = "coaps+tcp";                                                    \
      if ((endpoint).flags & IPV4) {                                             \
--      PRINT("[%d.%d.%d.%d]:%d", ((endpoint).addr.ipv4.address)[0],             \
-+      PRINT("[%d.%d.%d.%d]:%u", ((endpoint).addr.ipv4.address)[0],             \
+-      PRINT("%s://%d.%d.%d.%d:%d", scheme, ((endpoint).addr.ipv4.address)[0],  \
++      PRINT("%s://%d.%d.%d.%d:%u", scheme, ((endpoint).addr.ipv4.address)[0],  \
              ((endpoint).addr.ipv4.address)[1],                                 \
              ((endpoint).addr.ipv4.address)[2],                                 \
              ((endpoint).addr.ipv4.address)[3], (endpoint).addr.ipv4.port);     \
-@@ -39,7 +46,7 @@
-       PRINT(                                                                   \
-         "[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%"    \
+@@ -59,7 +75,7 @@ extern "C"
+         "%s://[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%"    \
+         "02x:%"                                                                \
          "02x%"                                                                 \
 -        "02x]:%d",                                                             \
 +        "02x]:%u",                                                             \
-         ((endpoint).addr.ipv6.address)[0], ((endpoint).addr.ipv6.address)[1],  \
-         ((endpoint).addr.ipv6.address)[2], ((endpoint).addr.ipv6.address)[3],  \
-         ((endpoint).addr.ipv6.address)[4], ((endpoint).addr.ipv6.address)[5],  \
-@@ -54,7 +61,32 @@
-     }                                                                          \
+         scheme, ((endpoint).addr.ipv6.address)[0],                             \
+         ((endpoint).addr.ipv6.address)[1], ((endpoint).addr.ipv6.address)[2],  \
+         ((endpoint).addr.ipv6.address)[3], ((endpoint).addr.ipv6.address)[4],  \
+@@ -164,10 +180,31 @@ extern "C"
    } while (0)
  
--#ifdef OC_DEBUG
-+
-+#ifdef ARDUINO
+ #ifdef OC_DEBUG
+-#ifdef __ANDROID__
++#if defined(__ANDROID__)
+ #define OC_LOG(level, ...)          android_log(level, __FILE__, __func__, __LINE__, __VA_ARGS__)
+ #define OC_LOGipaddr(endpoint)      android_log_ipaddr("DEBUG", __FILE__, __func__, __LINE__, endpoint)
+ #define OC_LOGbytes(bytes, length)  android_log_bytes("DEBUG", __FILE__, __func__, __LINE__, bytes, length)
++#elif defined(ARDUINO)
 +#define OC_LOG(level, format, ...)                                            \
 +  do {                                                                        \
 +      PRINT(level ": " __FILE__ "<%s:%d> ", __func__, __LINE__);           \
 +      PRINT(format, ##__VA_ARGS__);                                           \
 +      PRINT("\n");                                                          \
 +  } while (0)
-+#define OC_DBG(format, ...)   OC_LOG("DBG", format, ##__VA_ARGS__)
-+#define OC_WRN(format, ...)   OC_LOG("WRN", format,##__VA_ARGS__)
-+#define OC_ERR(format, ...)   OC_LOG("ERR", format, ##__VA_ARGS__)
 +#define OC_LOGipaddr(endpoint)                                                \
 +  do {                                                                        \
 +      PRINT("DBG: " __FILE__   "<%s:%d>: " , __func__, __LINE__);             \
@@ -72,51 +198,73 @@
 +  do {                                                                        \
 +			 PRINT("DBG: " __FILE__  "<%s:%d>: " , __func__, __LINE__);                   \
 +			 uint16_t i;                                                             \
-+      for (i = 0; i < length; i++)                                            \
++      for (i = 0; i < (uint16_t)length; i++)                                            \
 +        PRINT(" %02X", bytes[i]);                                             \
 +      PRINT("\r\n");                                                          \
 +  } while (0)
-+#else /* ! ARDUINO */
+ #else  /* ! __ANDROID */
  #define OC_LOG(level, ...)                                                     \
    do {                                                                         \
-     PRINT("%s: %s <%s:%d>: ", level, __FILE__, __func__, __LINE__);            \
-@@ -78,13 +110,6 @@
+@@ -185,7 +222,7 @@ extern "C"
+   do {                                                                         \
+     PRINT("DEBUG: %s <%s:%d>: ", __FILE__, __func__, __LINE__);                \
+     uint16_t i;                                                                \
+-    for (i = 0; i < length; i++)                                               \
++    for (i = 0; i < (uint16_t)length; i++)                                               \
        PRINT(" %02X", bytes[i]);                                                \
      PRINT("\n");                                                               \
    } while (0)
--#else
--#define OC_LOG(...)
--#define OC_DBG(...)
--#define OC_WRN(...)
--#define OC_ERR(...)
--#define OC_LOGipaddr(endpoint)
--#define OC_LOGbytes(bytes, length)
- #endif
+--- a/security/oc_ael.c
++++ b/security/oc_ael.c
+@@ -18,9 +18,6 @@
  
- #ifdef __cplusplus
---- a/security/oc_store.c	2019-04-15 21:50:39.665683094 +0200
-+++ b/security/oc_store.c	2019-04-17 12:07:36.003254426 +0200
-@@ -36,7 +36,7 @@
- gen_svr_tag(const char *name, size_t device_index, char *svr_tag)
- {
-   int svr_tag_len =
--    snprintf(svr_tag, SVR_TAG_MAX, "%s_%zd", name, device_index);
-+    snprintf(svr_tag, SVR_TAG_MAX, "%s_%d", name, device_index);
-   svr_tag_len =
-     (svr_tag_len < SVR_TAG_MAX - 1) ? svr_tag_len + 1 : SVR_TAG_MAX - 1;
-   svr_tag[svr_tag_len] = '\0';--- security/oc_doxm.c	2019-04-21 14:03:46.955490801 +0200
---- a/security/oc_doxm.c	2019-04-21 14:34:51.869274891 +0200
-+++ b/security/oc_doxm.c	2019-04-21 14:34:51.869274891 +0200
-@@ -24,10 +24,11 @@
- #include "oc_store.h"
  #include <stddef.h>
  #include <string.h>
-+#ifndef ARDUINO
- #ifndef _WIN32
- #include <strings.h>
- #endif
+-#ifndef _WIN32
+-#include <strings.h>
+-#endif
+ 
+ #include "oc_ael.h"
+ #include "oc_api.h"
+--- a/security/oc_doxm.c
++++ b/security/oc_doxm.c
+@@ -25,10 +25,6 @@
+ #include "oc_tls.h"
+ #include <stddef.h>
+ #include <string.h>
+-#ifndef _WIN32
+-#include <strings.h>
+-#endif
 -
-+#endif
  #ifdef OC_DYNAMIC_ALLOCATION
  #include "port/oc_assert.h"
  #include <stdlib.h>
+--- a/util/oc_memb.c
++++ b/util/oc_memb.c
+@@ -66,7 +66,7 @@ _oc_memb_alloc(
+     return NULL;
+   }
+ 
+-  int i = m->num;
++  unsigned int i = m->num;
+   void *ptr = NULL;
+   if (m->num > 0) {
+     for (i = 0; i < m->num; i++) {
+@@ -125,7 +125,7 @@ _oc_memb_free(
+   oc_mem_trace_add_pace(func, m->size, MEM_TRACE_FREE, ptr);
+ #endif
+ 
+-  int i = m->num;
++  unsigned int i = m->num;
+   char *ptr2 = NULL;
+   if (m->num > 0) {
+     /* Walk through the list of blocks and try to find the block to
+@@ -173,7 +173,7 @@ int oc_memb_inmemb(struct oc_memb * m, void *ptr)
+ int
+ oc_memb_numfree(struct oc_memb *m)
+ {
+-  int i;
++  unsigned int i;
+   int num_free = 0;
+ 
+   for (i = 0; i < m->num; ++i) {
