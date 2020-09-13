@@ -1,5 +1,4 @@
-#include "Ethernet2.h"
-#include "serial.h"
+#include "Ethernet.h"
 #include "oc_api.h"
 #include "oc_clock.h"
 #include "oc_assert.h"

@@ -138,8 +138,8 @@ export ARDUINO_HOME=$HOME/arduino-home
 export ARDMK_DIR=$PWD/Arduino-Makefile
 export ARDMK_REMOTE="https://github.com/sudar/Arduino-Makefile"
 
-declare -a LIBS=('Ethernet2|https://github.com/adafruit/Ethernet2.git' 'pRNG|https://github.com/leomil72/pRNG.git' 'SdFat|https://github.com/greiman/SdFat.git' 'Time|https://github.com/PaulStoffregen/Time.git' )
-declare TAG_Ethernet2="1.0.4"
+declare -a LIBS=('Ethernet|https://github.com/arduino-libraries/Ethernet' 'pRNG|https://github.com/leomil72/pRNG.git' 'SdFat|https://github.com/greiman/SdFat.git' 'Time|https://github.com/PaulStoffregen/Time.git' )
+declare TAG_Ethernet="2.0.0"
 declare TAG_pRNG="1.2.3"
 declare TAG_SdFat="1.1.4"
 declare TAG_Time="v1.6"

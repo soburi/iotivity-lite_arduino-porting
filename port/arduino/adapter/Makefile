@@ -22,7 +22,7 @@ SRC=$(wildcard $(ROOT_DIR)/messaging/coap/*.c $(ROOT_DIR)/api/*.c *.c )
 
 # Arduino ethernet and iotivity constrained includes
 
-LIB_HEADERS   =-I$(ARDUINO_DIR)/libraries/Ethernet2/src/utility -I$(ARDUINO_DIR)/libraries/SdFat/src/FatLib
+LIB_HEADERS   =-I$(ARDUINO_DIR)/libraries/Ethernet/src -I$(ARDUINO_DIR)/libraries/SdFat/src/FatLib
 DEPS_HEADERS  =$(addprefix -I../deps/, pRNG  wiz5500 sdFat serial)
 CORE_HEADERS  =$(addprefix -I$(ROOT_DIR)/, messaging/coap util util/pt include  api port .)
 CFLAGS += -I. $(CORE_HEADERS) $(LIB_HEADERS) $(DEPS_HEADERS)
