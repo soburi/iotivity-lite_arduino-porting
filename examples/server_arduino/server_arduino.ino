@@ -128,7 +128,13 @@ OC_PROCESS_THREAD(sample_server_process, ev, data)
   static struct oc_etimer et;
   static const oc_handler_t handler = {.init = app_init,
                                        .signal_event_loop = signal_event_loop,
-                                       .register_resources = register_resources };
+#ifdef OC_SERVER
+                                       .register_resources = register_resources,
+#endif
+#ifdef OC_CLIENT
+                                       .requests_entry = NULL,
+#endif
+                                      };
   static oc_clock_time_t next_event;
   oc_set_mtu_size(1024);
   oc_set_max_app_data_size(2048);
