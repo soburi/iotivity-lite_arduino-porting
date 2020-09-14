@@ -24,7 +24,8 @@
 #define ETH_ADAPTER_UTILS_
 
 #include <stdint.h>
-#include <utility/socket.h>
+#include <Ethernet.h>
+#include <utility/w5100.h>
 
 #ifdef __cplusplus
 extern "C"

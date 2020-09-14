@@ -16,15 +16,14 @@
 *
 ******************************************************************/
 #include <Arduino.h>
-#include <Ethernet2.h>
-#include <utility/w5500.h>
-#include <utility/socket.h>
+#include <Ethernet.h>
 #include <ctype.h>
 #include "oc_config.h"
 #include "port/oc_log.h"
 #include "port/oc_assert.h"
 #include "port/oc_connectivity.h"
 #include "port/oc_log.h"
+#include "w5100socket.h"
 #include "ethadapter_utils.h"
 
 
@@ -34,7 +33,7 @@ OCResult_t arduino_get_free_socket(uint8_t *sockID){
 	*sockID = 0;
 	for (uint8_t i = 1; i < MAX_SOCK_NUM; i++)
 	{
-		state = w5500.readSnSR(i) ;
+		state = W5100.readSnSR(i) ;
 		if (state == SnSR::CLOSED || state == SnSR::FIN_WAIT)
 		{
 			*sockID = i;
@@ -63,7 +62,7 @@ OCResult_t arduino_init_udp_socket(uint16_t *local_port, uint8_t *socketID){
 		return ret;
 	}
 	//Create a datagram socket on which to recv/send.
-	if (!socket(*socketID, SnMR::UDP, *local_port, 0))
+	if (!W5100Socket::socket(*socketID, SnMR::UDP, *local_port, 0))
 	{
 		OC_ERR("socket create failed!");
 		return STATUS_FAILED;
@@ -98,10 +97,10 @@ arduino_init_mcast_udp_socket(const char *mcast_addr, uint16_t *mcast_port,
 	mcast_mac_addr[3] = ip_addr[1] & 0x7F;
 	mcast_mac_addr[4] = ip_addr[2];
 	mcast_mac_addr[5] = ip_addr[3];
-	w5500.writeSnDIPR(*socketID, (uint8_t *)ip_addr);
-	w5500.writeSnDHAR(*socketID, (uint8_t *)mcast_mac_addr);
-	w5500.writeSnDPORT(*socketID, *mcast_port);
-	if (!socket(*socketID, SnMR::UDP, *local_port, SnMR::MULTI))
+	W5100.writeSnDIPR(*socketID, ip_addr);
+	W5100.writeSnDHAR(*socketID, mcast_mac_addr);
+	W5100.writeSnDPORT(*socketID, *mcast_port);
+	if (!W5100Socket::socket(*socketID, SnMR::UDP, *local_port, SnMR::MULTI))
 	{
 		OC_ERR("sock create fail!");
 		return SOCKET_OPERATION_FAILED;
@@ -111,7 +110,7 @@ arduino_init_mcast_udp_socket(const char *mcast_addr, uint16_t *mcast_port,
 /// Retrieves the IP address assigned to Arduino Ethernet shield
 OCResult_t oc_ard_get_iface_addr(uint8_t *address)
 {
-	w5500.getIPAddress((uint8_t *)address);
+	W5100.getIPAddress((uint8_t *)address);
 	return STATUS_OK;
 }
 
@@ -187,7 +186,7 @@ uint8_t start_udp_server(uint16_t *local_port)
 		return STATUS_FAILED;
 	}
 	uint8_t raw_ip_addr[4];
-	w5500.getIPAddress(raw_ip_addr);
+	W5100.getIPAddress(raw_ip_addr);
 	uint8_t serverFD = 1; // try this socket
 	if (arduino_init_udp_socket(local_port, &serverFD) != STATUS_OK)
 	{
@@ -211,8 +210,7 @@ uint8_t start_udp_mcast_server(const char *mcast_addr,
 
 /*Utility method to monitor ready socket*/
 static uint16_t socket_ready(uint8_t *socketID){
-
-  uint16_t recvLen = w5500.getRXReceivedSize(*socketID);
+  uint16_t recvLen = W5100Socket::getRXReceivedSize(*socketID);
   if(recvLen == 0) {
     return 0;
   } else {
@@ -238,7 +236,7 @@ int16_t recv_msg(uint8_t *socketID, uint8_t *sender_addr, uint16_t *sender_port,
                  uint8_t *data, uint16_t packets_size)
 {
   packets_size = packets_size > OC_MAX_APP_DATA_SIZE ? OC_MAX_APP_DATA_SIZE : packets_size;
-  return recvfrom(*socketID, (uint8_t *)data, packets_size + 1, sender_addr, sender_port);
+  return W5100Socket::RecvFrom(*socketID, (uint8_t *)data, packets_size + 1, sender_addr, sender_port);
 }
 
 OCResult_t ard_send_data(uint8_t socketID, uint8_t *dest_addr,
@@ -246,7 +244,7 @@ OCResult_t ard_send_data(uint8_t socketID, uint8_t *dest_addr,
                           const uint16_t len)
 {
 	uint8_t _socketID = socketID; // default client socket
-	uint32_t ret = sendto(_socketID, data, len, dest_addr, *dest_port);
+	uint32_t ret = W5100Socket::SendTo(_socketID, data, len, dest_addr, *dest_port);
 	if (ret <= 0){
 		OC_ERR("SendData failed: %u", ret);
 	}

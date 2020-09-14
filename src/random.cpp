@@ -23,62 +23,11 @@
 #if defined(__AVR__)
 #include "pRNG.h"
 
-typedef struct {
-    void *prng_ref;
-} prng_t;
+static pRNG _pRNG;
 
-prng_t *_prng_holder = NULL;
-
-prng_t *prng_create()
-{
-    prng_t *prng_holder;
-    pRNG *prng_ref;
-
-    prng_holder     = (typeof(prng_holder))malloc(sizeof(*prng_holder));
-    prng_ref    = new pRNG();
-    prng_holder->prng_ref = prng_ref;
-    return prng_holder;
-}
-
-void prng_destroy(prng_t *prng_holder)
-{
-    if (prng_holder== NULL)
-        return;
-    delete static_cast<pRNG *>(prng_holder->prng_ref);
-    free(prng_holder);
-}
-uint8_t prng_getRndByte(prng_t *prng_holder){
-
-    pRNG *prng_ref;
-
-    if (prng_holder== NULL)
-        return 1;
-
-    prng_ref = static_cast<pRNG *>(prng_holder->prng_ref);
-    return prng_ref->getRndByte();
-}
-
-uint16_t prng_getRndInt(prng_t *prng_holder){
-
-    pRNG *prng_ref;
-
-    if (prng_holder== NULL)
-        return 1;
-    prng_ref = static_cast<pRNG *>(prng_holder->prng_ref);
-    return prng_ref->getRndInt();
-}
-
-uint32_t prng_getRndLong(prng_t *prng_holder){
-
-    pRNG *prng_ref;
-
-    if (prng_holder== NULL)
-        return 1;
-    prng_ref = static_cast<pRNG *>(prng_holder->prng_ref);
-    return prng_ref->getRndLong();
-}
 #elif defined(__SAMD21G18A__)
 #include <WMath.h>
+#include <wiring_analog.h>
 #include "stdlib.h"
 #include "stdint.h"
 // This temporary: one need to implment the prng for samd ARCH
@@ -111,9 +60,7 @@ extern long _random32( long howsmall, long howbig )
 void
 oc_random_init(void)
 {
-#if defined(__AVR__)
-  _prng_holder = prng_create();
-#elif defined(__SAM3X8E__ )
+#if defined(__SAM3X8E__ )
   pmc_enable_periph_clk(ID_TRNG);
   TRNG->TRNG_IDR = 0xFFFFFFFF;
   TRNG->TRNG_CR = TRNG_CR_KEY(0x524e47) | TRNG_CR_ENABLE;
@@ -127,12 +74,7 @@ oc_random_value(void)
 {
 unsigned int rand_val = 0;
 #if defined(__AVR__)
-  if(_prng_holder == NULL) {
-    _prng_holder = prng_create();
-  }
-  if (_prng_holder == NULL)
-      return 0;
-  rand_val =  (unsigned int)prng_getRndInt(_prng_holder);
+  rand_val =  (unsigned int)_pRNG.getRndInt();
 #elif defined(__SAM3X8E__ )
   while (! (TRNG->TRNG_ISR & TRNG_ISR_DATRDY));
   rand_val = TRNG->TRNG_ODATA;
@@ -145,7 +87,4 @@ unsigned int rand_val = 0;
 void
 oc_random_destroy(void)
 {
-#ifdef __AVR__
-  prng_destroy(_prng_holder);
-#endif
 }

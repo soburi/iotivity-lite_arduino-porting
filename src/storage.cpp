@@ -1,10 +1,11 @@
 #ifdef OC_SECURITY
+#include <Arduino.h>
+#include <SdFat.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include "port/oc_storage.h"
 #include "port/oc_log.h"
-#include "sdfat.h"
 #define STORE_PATH_SIZE 20
 // SD chip select pin
 #if defined(__AVR__) || defined(__SAM3X8E__)
@@ -15,8 +16,8 @@ const uint8_t chipSelect = SDCARD_SS_PIN;
 #warning Please update Eth shield chip select
 #endif
 
-SdFat sdfat;
-SdFile sdfile;
+static SdFat sdfat;
+static SdFile sdfile;
 
 static char store_path[STORE_PATH_SIZE];
 static int8_t store_path_len;
@@ -70,7 +71,7 @@ oc_storage_write(const char *store, uint8_t *buf, size_t len)
   if(!sdfile.isOpen()) {
     return -1;
   }else {
-		if((len  =  sdfile.write(buf, len)) == -1) {
+		if(!(len  =  sdfile.write(buf, len))) {
 			OC_ERR("Error writing to: %s",store_path );
 			return -1;
 		}
@@ -92,7 +93,7 @@ oc_storage_read(const char *store, uint8_t *buf, size_t len)
     return -1;
   }
   while(sdfile.available()){
-    if((len  =  sdfile.read(buf, len)) == -1) {
+    if(!(len  =  sdfile.read(buf, len))) {
       OC_ERR("Error reading from: %s",store_path );
     }
   }
